@@ -9,8 +9,7 @@
 #include "bsp.h"
 #include "app_error.h"
 #include "nrf_twi_mngr.h"
-#include "lm75b.h"
-#include "mma7660.h"
+#include "hdc1080.h"
 #include "compiler_abstraction.h"
 
 #include "nrf_log.h"
@@ -101,7 +100,7 @@ void read_all_cb(ret_code_t result, void * p_user_data)
     m_sum.hum       += p_sample->hum;
 
     ++m_sample_idx;
-    
+
     if (m_sample_idx >= NUMBER_OF_SAMPLES)
     {
         m_sample_idx = 0;
@@ -175,8 +174,8 @@ static void read_hdc1080_registers(void)
 //
 static void bsp_event_handler(bsp_event_t event)
 {
-    // Each time the button 1 or 4 is pushed we start a transaction reading
-    // values of all registers from LM75B or MMA7660 respectively.
+    // Each time the button 1 is pushed we start a transaction reading
+    // values of all registers from HDC1080
     switch (event)
     {
     case BSP_EVENT_KEY_0: // Button 1 pushed.

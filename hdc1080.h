@@ -34,6 +34,11 @@ extern "C" {
     NRF_TWI_MNGR_WRITE(HDC1080_ADDR, p_reg_addr, 1,        NRF_TWI_MNGR_NO_STOP), \
     NRF_TWI_MNGR_READ (HDC1080_ADDR, p_buffer,   byte_cnt, 0)
 
+#define HDC_READ_TEMP(p_buffer) \
+    HDC1080_READ(&hdc1080_temp_reg_addr, p_buffer, 2)
+
+#define HDC_READ_HUM(p_buffer) \
+    HDC1080_READ(&hdc1080_hum_reg_addr, p_buffer, 2)
 
 #define HDC1080_INIT_TRANSFER_COUNT 1
 
