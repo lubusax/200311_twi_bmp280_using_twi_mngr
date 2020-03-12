@@ -20,8 +20,7 @@
 
 #define MAX_PENDING_TRANSACTIONS    5
 
-NRF_TWI_MNGR_DEF(m_nrf_twi_mngr,
-        MAX_PENDING_TRANSACTIONS, TWI_INSTANCE_ID);
+NRF_TWI_MNGR_DEF(m_nrf_twi_mngr, MAX_PENDING_TRANSACTIONS, TWI_INSTANCE_ID);
 APP_TIMER_DEF(m_timer);
 
 // Pin number for indicating communication with sensors.
@@ -33,7 +32,7 @@ APP_TIMER_DEF(m_timer);
 
 
 // Buffer for data read from sensors.
-#define BUFFER_SIZE  6
+#define BUFFER_SIZE  10
 static uint8_t m_buffer[BUFFER_SIZE];
 
 // Data structures needed for averaging of data read from sensors.
@@ -94,7 +93,7 @@ void read_all_cb(ret_code_t result, void * p_user_data)
     uint8_t hum_lo  = m_buffer[5];
 
     p_sample->temp  = HDC1080_GET_TEMP_VALUE(temp_hi, temp_lo);
-    p_sample->hum   = HDC1080_GET_HUM_VALUE (hum_hi, hum_lo);
+    p_sample->hum   = HDC1080_GET_HUM_VALUE(hum_hi, hum_lo);
 
     m_sum.temp      += p_sample->temp;
     m_sum.hum       += p_sample->hum;
@@ -131,7 +130,7 @@ static void read_all(void)
     bsp_board_led_invert(READ_ALL_INDICATOR);
 }
 
-#if (BUFFER_SIZE < 6)
+#if (BUFFER_SIZE < 10)
     #error Buffer too small.
 #endif
 static void read_hdc1080_registers_cb(ret_code_t result, void * p_user_data)
@@ -143,7 +142,7 @@ static void read_hdc1080_registers_cb(ret_code_t result, void * p_user_data)
     }
 
     NRF_LOG_DEBUG("hdc1080: ");
-    NRF_LOG_HEXDUMP_DEBUG(m_buffer, 6);
+    NRF_LOG_HEXDUMP_DEBUG(m_buffer, 10);
 }
 static void read_hdc1080_registers(void)
 {
@@ -155,6 +154,8 @@ static void read_hdc1080_registers(void)
         HDC1080_READ(&hdc1080_config_reg_addr,  &m_buffer[0], 2),
         HDC1080_READ(&hdc1080_temp_reg_addr,    &m_buffer[2], 2),
         HDC1080_READ(&hdc1080_hum_reg_addr,     &m_buffer[4], 2),
+        HDC1080_READ(&hdc1080_man_reg_addr,     &m_buffer[6], 2),
+        HDC1080_READ(&hdc1080_dev_reg_addr,     &m_buffer[8], 2),
     };
     static nrf_twi_mngr_transaction_t NRF_TWI_MNGR_BUFFER_LOC_IND transaction =
     {
@@ -236,7 +237,7 @@ void read_init(void)
     err_code = app_timer_create(&m_timer, APP_TIMER_MODE_REPEATED, timer_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(m_timer, APP_TIMER_TICKS(50), NULL);
+    err_code = app_timer_start(m_timer, APP_TIMER_TICKS(1000), NULL);
     APP_ERROR_CHECK(err_code);
 }
 

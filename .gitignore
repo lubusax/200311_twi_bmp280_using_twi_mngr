@@ -121,3 +121,31 @@ pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/nrf
 pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/nrfx_uarte.o
 pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/thumb_crt0.d
 pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/thumb_crt0.o
+lm75b.c
+lm75b.h
+main.c
+mma7660.c
+mma7660.h
+pca10056/blank/config/sdk_config.h
+pca10056/blank/ses/mma7660.c
+pca10056/blank/ses/twi_master_using_nrf_twi_mngr_pca10056_Release.jlink
+pca10056/blank/ses/Output/Release/Exe/twi_master_using_nrf_twi_mngr_pca10056.elf
+pca10056/blank/ses/Output/Release/Exe/twi_master_using_nrf_twi_mngr_pca10056.hex
+pca10056/blank/ses/Output/Release/Exe/twi_master_using_nrf_twi_mngr_pca10056.map
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/hdc1080.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/hdc1080.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/main.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT_printf.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT_printf.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT_Syscalls_SES.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT_Syscalls_SES.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/SEGGER_RTT.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/ses_startup_nrf_common.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/ses_startup_nrf_common.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/ses_startup_nrf52840.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/ses_startup_nrf52840.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/system_nrf52840.d
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/system_nrf52840.o
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/twi_master_using_nrf_twi_mngr_pca10056.ind
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/twi_master_using_nrf_twi_mngr_pca10056.ld

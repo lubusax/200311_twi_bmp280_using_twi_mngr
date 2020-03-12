@@ -2,6 +2,7 @@
 #define HDC1080_H__
 
 #include "nrf_twi_mngr.h"
+#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,10 +24,16 @@ extern "C" {
 #define HDC1080_REG_DEV_ID  0xFF
 
 #define HDC1080_GET_TEMP_VALUE(temp_hi, temp_lo) \
-    ((((float)(((int16_t)temp_hi << 8) | temp_lo)) / pow(2.0f, 16.0f)) * 165.0f - 40.0f)
+    ((((((int16_t)temp_hi << 8) | temp_lo)) / pow(2.0f, 16.0f)) * 165.0f - 40.0f)
 
 #define HDC1080_GET_HUM_VALUE(hum_hi, hum_lo) \
-    (((float)(((int16_t)hum_hi << 8) | hum_lo)) / pow(2.0f, 16.0f)) * 100.0f)
+    ((((((int16_t)hum_hi << 8) | hum_lo)) / pow(2.0f, 16.0f)) * 100.0f)
+
+extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_config_reg_addr ;
+extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_temp_reg_addr   ;
+extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_hum_reg_addr    ;
+extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_man_reg_addr    ;
+extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_dev_reg_addr    ;
 
 // extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND mma7660_xout_reg_addr;
 
@@ -34,16 +41,15 @@ extern "C" {
     NRF_TWI_MNGR_WRITE(HDC1080_ADDR, p_reg_addr, 1,        NRF_TWI_MNGR_NO_STOP), \
     NRF_TWI_MNGR_READ (HDC1080_ADDR, p_buffer,   byte_cnt, 0)
 
-#define HDC_READ_TEMP(p_buffer) \
+#define HDC1080_READ_TEMP(p_buffer) \
     HDC1080_READ(&hdc1080_temp_reg_addr, p_buffer, 2)
 
-#define HDC_READ_HUM(p_buffer) \
+#define HDC1080_READ_HUM(p_buffer) \
     HDC1080_READ(&hdc1080_hum_reg_addr, p_buffer, 2)
 
 #define HDC1080_INIT_TRANSFER_COUNT 1
 
-extern nrf_twi_mngr_transfer_t const
-        hdc1080_init_transfers[HDC1080_INIT_TRANSFER_COUNT];
+extern nrf_twi_mngr_transfer_t const hdc1080_init_transfers[HDC1080_INIT_TRANSFER_COUNT];
 
 #ifdef __cplusplus
 }
