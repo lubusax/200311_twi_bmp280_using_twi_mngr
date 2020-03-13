@@ -16,3 +16,5 @@ nrf_twi_mngr_transfer_t const hdc1080_init_transfers[HDC1080_INIT_TRANSFER_COUNT
 {
     NRF_TWI_MNGR_WRITE(HDC1080_ADDR, default_config, sizeof(default_config), 0)
 };
+
+

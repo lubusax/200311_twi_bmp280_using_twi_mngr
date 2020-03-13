@@ -38,14 +38,25 @@ extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND hdc1080_dev_reg_addr    ;
 // extern uint8_t NRF_TWI_MNGR_BUFFER_LOC_IND mma7660_xout_reg_addr;
 
 #define HDC1080_READ(p_reg_addr, p_buffer, byte_cnt) \
-    NRF_TWI_MNGR_WRITE(HDC1080_ADDR, p_reg_addr, 1,        NRF_TWI_MNGR_NO_STOP), \
-    NRF_TWI_MNGR_READ (HDC1080_ADDR, p_buffer,   byte_cnt, 0)
+    NRF_TWI_MNGR_WRITE(HDC1080_ADDR, p_reg_addr, 1, NRF_TWI_MNGR_NO_STOP), \
+    NRF_TWI_MNGR_READ(HDC1080_ADDR, p_buffer,   byte_cnt, 0)
+
+////////
+#define HDC1080_WRITE_T_AND_HR(p_reg_addr) \
+    NRF_TWI_MNGR_WRITE(HDC1080_ADDR,  p_reg_addr, 1, NRF_TWI_MNGR_NO_STOP)
+
+#define HDC1080_READ_T_AND_HR(p_buffer) \
+    NRF_TWI_MNGR_READ(HDC1080_ADDR, p_buffer, 4 , 0)
+////////
 
 #define HDC1080_READ_TEMP(p_buffer) \
     HDC1080_READ(&hdc1080_temp_reg_addr, p_buffer, 2)
 
 #define HDC1080_READ_HUM(p_buffer) \
     HDC1080_READ(&hdc1080_hum_reg_addr, p_buffer, 2)
+
+#define HDC1080_READ_MANUFACTURER(p_buffer) \
+    HDC1080_READ(&hdc1080_man_reg_addr, p_buffer, 2)
 
 #define HDC1080_INIT_TRANSFER_COUNT 1
 

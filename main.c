@@ -15,6 +15,8 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_delay.h"
+#include "math.h"
 
 #define TWI_INSTANCE_ID             0
 
@@ -58,6 +60,32 @@ static sample_t m_samples[NUMBER_OF_SAMPLES] = { { 0.0f, 0.0f } };
 
 static uint8_t m_sample_idx = 0;
 
+ret_code_t result_mngr_perform;
+
+// temperature and relative humidity related variables
+static uint8_t m_temp_and_hr_buffer[4]; // T: bytes 0 and 1; HR: bytes 2 and 3
+
+static nrf_twi_mngr_transfer_t const transfer_write_temp[] =
+{
+    HDC1080_WRITE_T_AND_HR(&hdc1080_temp_reg_addr)
+};
+
+static nrf_twi_mngr_transfer_t const transfer_read_temp[] =
+{
+    HDC1080_READ_T_AND_HR(&m_temp_and_hr_buffer)
+};
+
+float temperature;
+float relative_humidity;
+
+// manufacturer register related variables
+static uint8_t m_manufacturer_buffer[2];
+
+static nrf_twi_mngr_transfer_t const transfer_manufacturer[] =
+{
+    HDC1080_READ_MANUFACTURER(&m_manufacturer_buffer)
+};
+
 
 #if defined( __GNUC__ ) && (__LINT__ == 0)
     // This is required if one wants to use floating-point values in 'printf'
@@ -76,6 +104,7 @@ static uint8_t m_sample_idx = 0;
 
 void read_all_cb(ret_code_t result, void * p_user_data)
 {
+
     if (result != NRF_SUCCESS)
     {
         NRF_LOG_WARNING("read_all_cb - error: %d", (int)result);
@@ -105,26 +134,66 @@ void read_all_cb(ret_code_t result, void * p_user_data)
         m_sample_idx = 0;
     }
 }
+//static void read_all(void)
+//{
+//    // [these structures have to be "static" - they cannot be placed on stack
+//    //  since the transaction is scheduled and these structures most likely
+//    //  will be referred after this function returns]
+//    static nrf_twi_mngr_transfer_t const transfers[] =
+//    {
+//        HDC1080_READ_TEMP(&m_buffer[2])
+//        ,
+//        HDC1080_READ_HUM(&m_buffer[4])
+//    };
+//    static nrf_twi_mngr_transaction_t NRF_TWI_MNGR_BUFFER_LOC_IND transaction =
+//    {
+//        .callback            = read_all_cb,
+//        .p_user_data         = NULL,
+//        .p_transfers         = transfers,
+//        .number_of_transfers = sizeof(transfers) / sizeof(transfers[0])
+//    };
+//
+//    APP_ERROR_CHECK(nrf_twi_mngr_schedule(&m_nrf_twi_mngr, &transaction));
+//
+//    // Signal on LED that something is going on.
+//    bsp_board_led_invert(READ_ALL_INDICATOR);
+//}
+
 static void read_all(void)
 {
     // [these structures have to be "static" - they cannot be placed on stack
     //  since the transaction is scheduled and these structures most likely
     //  will be referred after this function returns]
-    static nrf_twi_mngr_transfer_t const transfers[] =
-    {
-        HDC1080_READ_TEMP(&m_buffer[2])
-        ,
-        HDC1080_READ_HUM(&m_buffer[4])
-    };
-    static nrf_twi_mngr_transaction_t NRF_TWI_MNGR_BUFFER_LOC_IND transaction =
-    {
-        .callback            = read_all_cb,
-        .p_user_data         = NULL,
-        .p_transfers         = transfers,
-        .number_of_transfers = sizeof(transfers) / sizeof(transfers[0])
-    };
+     result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr,
+                                        NULL, transfer_write_temp,
+                                        1, NULL);
+    nrf_delay_ms(20);
 
-    APP_ERROR_CHECK(nrf_twi_mngr_schedule(&m_nrf_twi_mngr, &transaction));
+    result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr,
+                                        NULL, transfer_read_temp,
+                                        1, NULL);
+
+    temperature = ((((((int16_t)m_temp_and_hr_buffer[0] << 8) | \
+      m_temp_and_hr_buffer[1])) / pow(2.0f, 16.0f)) * 165.0f - 40.0f); // in °C
+ 
+    relative_humidity = ((((((int16_t)m_temp_and_hr_buffer[2] << 8) | \
+      m_temp_and_hr_buffer[3])) / pow(2.0f, 16.0f)) * 100.0f); // in %
+    
+
+    NRF_LOG_RAW_INFO("\r\nResult Read T Register once: %d \r\n",
+                    result_mngr_perform);
+    NRF_LOG_RAW_INFO("\r\nT Register 2 bytes: %x %x\r\n",
+                    m_temp_and_hr_buffer[0], m_temp_and_hr_buffer[1]);
+    NRF_LOG_RAW_INFO("\r\nHR Register 2 bytes: %x %x\r\n",
+                    m_temp_and_hr_buffer[2], m_temp_and_hr_buffer[3]);
+    NRF_LOG_RAW_INFO("Temperature " NRF_LOG_FLOAT_MARKER " C\r\n",
+                      NRF_LOG_FLOAT(temperature));
+    NRF_LOG_RAW_INFO("Relative Humidity " NRF_LOG_FLOAT_MARKER " %% \r\n",
+                      NRF_LOG_FLOAT(relative_humidity) );
+
+
+    NRF_LOG_FLUSH();
+    APP_ERROR_CHECK(result_mngr_perform);   
 
     // Signal on LED that something is going on.
     bsp_board_led_invert(READ_ALL_INDICATOR);
@@ -133,6 +202,21 @@ static void read_all(void)
 #if (BUFFER_SIZE < 10)
     #error Buffer too small.
 #endif
+
+static void read_hdc1080_temp_register_cb(ret_code_t result, void * p_user_data)
+{
+    if (result != NRF_SUCCESS)
+    {
+        NRF_LOG_WARNING("read_hdc1080_temp_register_cb - error: %d", (int)result);
+        return;
+    }
+
+    NRF_LOG_DEBUG("hdc1080: ");
+    NRF_LOG_HEXDUMP_DEBUG(m_buffer, 10);
+    NRF_LOG_RAW_INFO("\r\nResult Read Temp Register: %d \r\n",result);
+    NRF_LOG_FLUSH();
+}
+
 static void read_hdc1080_registers_cb(ret_code_t result, void * p_user_data)
 {
     if (result != NRF_SUCCESS)
@@ -166,6 +250,29 @@ static void read_hdc1080_registers(void)
     };
 
     APP_ERROR_CHECK(nrf_twi_mngr_schedule(&m_nrf_twi_mngr, &transaction));
+    // nrf_delay_ms(50);
+}
+
+static void read_hdc1080_temp_register(void)
+{
+    static nrf_twi_mngr_transfer_t const transfers[] =
+    {
+        //HDC1080_READ(&hdc1080_config_reg_addr,  &m_buffer[0], 2),
+        HDC1080_READ(&hdc1080_temp_reg_addr,    &m_buffer[2], 2),
+        //HDC1080_READ(&hdc1080_hum_reg_addr,     &m_buffer[4], 2),
+        //HDC1080_READ(&hdc1080_man_reg_addr,     &m_buffer[6], 2),
+        //HDC1080_READ(&hdc1080_dev_reg_addr,     &m_buffer[8], 2),
+    };
+    static nrf_twi_mngr_transaction_t NRF_TWI_MNGR_BUFFER_LOC_IND transaction =
+    {
+        .callback            = read_hdc1080_temp_register_cb,
+        .p_user_data         = NULL,
+        .p_transfers         = transfers,
+        .number_of_transfers = sizeof(transfers) / sizeof(transfers[0])
+    };
+
+    APP_ERROR_CHECK(nrf_twi_mngr_schedule(&m_nrf_twi_mngr, &transaction));
+    // nrf_delay_ms(50);
 }
 
 
@@ -237,7 +344,7 @@ void read_init(void)
     err_code = app_timer_create(&m_timer, APP_TIMER_MODE_REPEATED, timer_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(m_timer, APP_TIMER_TICKS(1000), NULL);
+    err_code = app_timer_start(m_timer, APP_TIMER_TICKS(500), NULL);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -251,6 +358,43 @@ void log_init(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
+void read_t_and_hr(void)
+{
+    result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr,
+                                        NULL, transfer_write_temp,
+                                        1, NULL);
+    nrf_delay_ms(20);
+
+    result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr,
+                                        NULL, transfer_read_temp,
+                                        1, NULL);
+
+    temperature = ((((((int16_t)m_temp_and_hr_buffer[0] << 8) | \
+      m_temp_and_hr_buffer[1])) / pow(2.0f, 16.0f)) * 165.0f - 40.0f); // in °C
+ 
+    relative_humidity = ((((((int16_t)m_temp_and_hr_buffer[2] << 8) | \
+      m_temp_and_hr_buffer[3])) / pow(2.0f, 16.0f)) * 100.0f); // in %
+    
+
+    NRF_LOG_RAW_INFO("\r\nResult Read T Register once: %d \r\n",
+                    result_mngr_perform);
+    NRF_LOG_RAW_INFO("\r\nT Register 2 bytes: %x %x\r\n",
+                    m_temp_and_hr_buffer[0], m_temp_and_hr_buffer[1]);
+    NRF_LOG_RAW_INFO("\r\nHR Register 2 bytes: %x %x\r\n",
+                    m_temp_and_hr_buffer[2], m_temp_and_hr_buffer[3]);
+    NRF_LOG_RAW_INFO("Temperature " NRF_LOG_FLOAT_MARKER " C\r\n",
+                      NRF_LOG_FLOAT(temperature));
+    NRF_LOG_RAW_INFO("Relative Humidity " NRF_LOG_FLOAT_MARKER " %% \r\n",
+                      NRF_LOG_FLOAT(relative_humidity) );
+
+
+    NRF_LOG_FLUSH();
+    APP_ERROR_CHECK(result_mngr_perform);
+
+    // Signal on LED that something is going on.
+    bsp_board_led_invert(READ_ALL_INDICATOR);
+ 
+}
 int main(void)
 {
     ret_code_t err_code;
@@ -270,18 +414,32 @@ int main(void)
 
     NRF_LOG_RAW_INFO("\r\nTWI master example started. \r\n");
     NRF_LOG_FLUSH();
+
     twi_config();
 
-    read_init();
+//    nrf_delay_ms(15); 
+//
+//    // Initialize sensor
+//    result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr, 
+//                                        NULL, hdc1080_init_transfers,
+//                                        HDC1080_INIT_TRANSFER_COUNT, NULL);
+//    NRF_LOG_RAW_INFO("\r\nResult Init Sensor: %d \r\n",result_mngr_perform);
+//    NRF_LOG_FLUSH();
+//    APP_ERROR_CHECK(result_mngr_perform);
+//
+//    nrf_delay_ms(20);
 
-    // Initialize sensor
-    APP_ERROR_CHECK(nrf_twi_mngr_perform(&m_nrf_twi_mngr, 
-                                        NULL, hdc1080_init_transfers,
-                                        HDC1080_INIT_TRANSFER_COUNT, NULL));
+// Read Temperature Register once
+    read_t_and_hr();
+    /////////////////////////////////////////
+
+
+    read_init(); // timer create and start
 
     while (true)
     {
         nrf_pwr_mgmt_run();
+
         NRF_LOG_FLUSH();
     }
 }
