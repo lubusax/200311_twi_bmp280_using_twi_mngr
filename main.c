@@ -7,6 +7,7 @@
 #include "nrf_pwr_mgmt.h"
 #include "nrf_drv_clock.h"
 #include "bsp.h"
+#include "bsp_nfc.h"
 #include "app_error.h"
 #include "nrf_twi_mngr.h"
 #include "hdc1080.h"
@@ -17,6 +18,10 @@
 #include "nrf_log_default_backends.h"
 #include "nrf_delay.h"
 #include "math.h"
+
+
+#define BTN_ID_WAKEUP               1   
+/**< ID of the button used to wake up the application. */
 
 #define TWI_INSTANCE_ID             0
 
@@ -33,12 +38,90 @@ APP_TIMER_DEF(m_single_shot_timer_id);
     #error "Please choose an output pin"
 #endif
 
-static uint32_t m_timeout = 2000; // in ms
+static uint32_t m_timeout = 3000; // in ms - one shot timer timeout
+
+
+static volatile bool m_is_ready;        
+/**< True if the application is ready to enter sleep/system OFF mode. */
+
 
 ret_code_t result_mngr_perform;
 
 // temperature and relative humidity related variables
 static uint8_t m_temp_and_hr_buffer[4]; // T: bytes 0 and 1; HR: bytes 2 and 3
+
+/**@brief Handler for shutdown preparation.
+ */
+bool shutdown_handler(nrf_pwr_mgmt_evt_t event)
+{
+    uint32_t err_code;
+
+    switch (event)
+    {
+        case NRF_PWR_MGMT_EVT_PREPARE_SYSOFF:
+            //NRF_LOG_INFO("NRF_PWR_MGMT_EVT_PREPARE_SYSOFF");
+            NRF_LOG_RAW_INFO("\r\n####### ##  shutdown handler shutdown handler  SYSOFF   SYSOFF\r\n");
+            NRF_LOG_RAW_INFO("\r\n####### ####### case PWR MGMT EVT PREPARE      SYSOFF   SYSOFF\r\n");
+            NRF_LOG_FLUSH();
+            err_code = bsp_buttons_disable();
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case NRF_PWR_MGMT_EVT_PREPARE_WAKEUP:
+            //NRF_LOG_INFO("NRF_PWR_MGMT_EVT_PREPARE_WAKEUP");
+            NRF_LOG_RAW_INFO("\r\n####### ##  shutdown handler shutdown handler WAKEUP   WAKEUP\r\n");
+            NRF_LOG_RAW_INFO("\r\n####### ####### case PWR MGMT EVT PREPARE     WAKEUP   WAKEUP\r\n");
+            NRF_LOG_FLUSH();
+            err_code = bsp_buttons_disable();
+            // Suppress NRF_ERROR_NOT_SUPPORTED return code.
+            UNUSED_VARIABLE(err_code);
+
+            err_code = bsp_wakeup_button_enable(BTN_ID_WAKEUP);
+            // Suppress NRF_ERROR_NOT_SUPPORTED return code.
+            UNUSED_VARIABLE(err_code);
+
+            err_code = bsp_nfc_sleep_mode_prepare();
+            // Suppress NRF_ERROR_NOT_SUPPORTED return code.
+            UNUSED_VARIABLE(err_code);
+
+                    
+            err_code = app_timer_start(m_single_shot_timer_id,
+                        APP_TIMER_TICKS(m_timeout), NULL);
+            NRF_LOG_RAW_INFO("\r\nResult App Timer Start %d \r\n",
+                        err_code);
+            NRF_LOG_RAW_INFO("\r\nTimeout %d ms\r\n",
+                        m_timeout);
+            NRF_LOG_FLUSH();
+            UNUSED_VARIABLE(err_code);
+
+
+            break;
+
+        case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+            NRF_LOG_ERROR("Entering DFU is not supported by this example.");
+            APP_ERROR_HANDLER(NRF_ERROR_API_NOT_IMPLEMENTED);
+            break;
+
+        case NRF_PWR_MGMT_EVT_PREPARE_RESET:
+            // NRF_LOG_INFO("NRF_PWR_MGMT_EVT_PREPARE_RESET");
+            NRF_LOG_RAW_INFO("\r\n####### ##  shutdown handler shutdown handler  RESET   RESET\r\n");
+            NRF_LOG_RAW_INFO("\r\n####### ####### case PWR MGMT EVT PREPARE      RESET   RESET\r\n");
+            NRF_LOG_FLUSH();
+            break;
+    }
+
+    // err_code = app_timer_stop_all();
+    // APP_ERROR_CHECK(err_code);
+
+        //nrf_delay_ms(30);
+
+    return true; // true: app can sysOFF
+}
+
+/**@brief Register application shutdown handler 
+ * with priority 0 --> highest priority */
+NRF_PWR_MGMT_HANDLER_REGISTER(shutdown_handler, 0); 
+
 
 static nrf_twi_mngr_transfer_t const transfer_write_temp[] =
 {
@@ -92,16 +175,35 @@ static void lfclk_request(void)
 
 static void read_t_and_hr(void)
 {
+    //twi_config();
+
+    #if NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_ENABLED
+        nrf_pwr_mgmt_feed();
+        //NRF_LOG_INFO("Power management fed");
+    #endif // NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_ENABLED‚‚
+
     ret_code_t err_code;
-
-    err_code = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-
     
-//    NRF_LOG_RAW_INFO("\r\nHDC1080 T and HR sensor with timer \r\n");
-//    NRF_LOG_FLUSH();
+    NRF_LOG_RAW_INFO("\r\nHDC1080 T and HR sensor with timer \r\n");
+    NRF_LOG_FLUSH();
+
+//    for (int j = 0; j < 2; j++)
+//    {
+//        for (int i = 0; i < LEDS_NUMBER; i++)
+//            {
+//                bsp_board_led_invert(i);
+//                nrf_delay_ms(300);
+//            }
+//    }
+
+    for (int j = 0; j < 3 ; j++)
+    {
+        bsp_board_leds_on();
+        nrf_delay_ms(100);
+        bsp_board_leds_off();
+        nrf_delay_ms(100);            
+    }
+
 
     nrf_delay_ms(15); 
 
@@ -142,14 +244,20 @@ static void read_t_and_hr(void)
     NRF_LOG_RAW_INFO("Relative Humidity " NRF_LOG_FLOAT_MARKER " %% \r\n",
                       NRF_LOG_FLOAT(relative_humidity) );
 
-
-    NRF_LOG_FLUSH();
     APP_ERROR_CHECK(result_mngr_perform);
 
-    err_code = app_timer_start(m_single_shot_timer_id,
-                APP_TIMER_TICKS(m_timeout), NULL);
-    APP_ERROR_CHECK(err_code);
- 
+    #if NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_ENABLED
+        nrf_pwr_mgmt_feed();
+//        NRF_LOG_RAW_INFO("\r\nwhenever you push any button the sysoff timeout timer is reset");
+//        NRF_LOG_RAW_INFO("\r\nbsp evt handler \r\n#######  Power management fed - It has a timeout of 5 seconds\r\n");
+//        NRF_LOG_RAW_INFO("\r\n");
+//        NRF_LOG_FLUSH();
+    #endif // NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_ENABLED
+    
+    nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+
+    //m_is_ready = true;        
+    /**< True: the application is ready to enter sleep/system OFF mode. */
 }
 
 static void single_shot_timer_handler(void * p_context)
@@ -173,8 +281,16 @@ int main(void)
 {
     ret_code_t err_code;
 
+    //m_is_ready = false; // no shut down
+
     // log_init();
-    //bsp_board_init(BSP_INIT_LEDS);
+    bsp_board_init(BSP_INIT_LEDS);
+    bsp_board_init(BSP_INIT_BUTTONS);
+
+    err_code = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(err_code);
+
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     lfclk_request(); // the LFCLK is requested
     app_timer_init(); //called before any calls to the Timer API
