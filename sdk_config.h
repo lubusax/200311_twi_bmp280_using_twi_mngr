@@ -982,7 +982,7 @@
  
 
 #ifndef APP_SCHEDULER_WITH_PAUSE
-#define APP_SCHEDULER_WITH_PAUSE 0
+#define APP_SCHEDULER_WITH_PAUSE 1
 #endif
 
 // <q> APP_SCHEDULER_WITH_PROFILER  - Enabling scheduler profiling
@@ -997,7 +997,7 @@
 // <e> APP_TIMER_ENABLED - app_timer - Application timer functionality
 //==========================================================
 #ifndef APP_TIMER_ENABLED
-#define APP_TIMER_ENABLED 1
+#define APP_TIMER_ENABLED 3
 #endif
 // <o> APP_TIMER_CONFIG_RTC_FREQUENCY  - Configure RTC prescaler.
  
@@ -1043,7 +1043,7 @@
  
 
 #ifndef APP_TIMER_CONFIG_USE_SCHEDULER
-#define APP_TIMER_CONFIG_USE_SCHEDULER 0
+#define APP_TIMER_CONFIG_USE_SCHEDULER 1
 #endif
 
 // <q> APP_TIMER_KEEPS_RTC_ACTIVE  - Enable RTC always on
@@ -1240,7 +1240,7 @@
 // <i> Shutdown procedure will begin no earlier than after this number of seconds.
 
 #ifndef NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S
-#define NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 3
+#define NRF_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 1
 #endif
 
 // </e>

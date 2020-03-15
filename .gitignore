@@ -150,3 +150,4 @@ pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/sys
 pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/twi_master_using_nrf_twi_mngr_pca10056.ind
 pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/twi_master_using_nrf_twi_mngr_pca10056.ld
 pca10056/blank/config/sdk_config copy.h
+pca10056/blank/ses/Output/twi_master_using_nrf_twi_mngr_pca10056 Release/Obj/bsp_nfc.o
