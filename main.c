@@ -1,6 +1,7 @@
 #include "nrf_drv_gpiote.h"
 
 #include <stdio.h>
+#include <stdlib.h> // random 
 #include "boards.h"
 #include "app_util_platform.h"
 #include "app_timer.h"
@@ -34,7 +35,9 @@ APP_TIMER_DEF(m_timer_id);
 // Pin number for indicating communication with sensors
 #define READ_ALL_INDICATOR  BSP_BOARD_LED_3
 
-static uint32_t m_timeout = 20000; // in ms - timer timeout
+static uint32_t m_timeout_basis = 600000; // in ms - timer timeout
+static uint32_t m_counter = 0; // how many measurements have been done 
+static uint32_t m_random_spread = 10000; // in ms 
 
 void * p_context;
 
@@ -83,8 +86,9 @@ static void twi_config_and_init(void)
 static void read_t_and_hr(void)
 {
 
-
+    m_counter++;
     NRF_LOG_RAW_INFO("\r\nHDC1080 T and HR sensor with timer \r\n");
+    NRF_LOG_RAW_INFO("Measurement number:    %d \r\n", m_counter);
     NRF_LOG_FLUSH();
 
     for (int j = 0; j < 3 ; j++)
@@ -103,8 +107,6 @@ static void read_t_and_hr(void)
                                         HDC1080_INIT_TRANSFER_COUNT, NULL);
     APP_ERROR_CHECK(result_mngr_perform);
 
-    // nrf_delay_ms(20);
-
     result_mngr_perform = nrf_twi_mngr_perform(&m_nrf_twi_mngr,
                                         NULL, transfer_write_temp,
                                         1, NULL);
@@ -121,7 +123,7 @@ static void read_t_and_hr(void)
       m_temp_and_hr_buffer[3])) / pow(2.0f, 16.0f)) * 100.0f); // in %
     
 
-    NRF_LOG_RAW_INFO("Temperature " NRF_LOG_FLOAT_MARKER " C\r\n",
+    NRF_LOG_RAW_INFO("Temperature       " NRF_LOG_FLOAT_MARKER " C\r\n",
                       NRF_LOG_FLOAT(temperature));
     NRF_LOG_RAW_INFO("Relative Humidity " NRF_LOG_FLOAT_MARKER " %% \r\n",
                       NRF_LOG_FLOAT(relative_humidity) );
@@ -141,6 +143,13 @@ static void timer_handler(void * p_context)
 
     read_t_and_hr();
     
+    int32_t variation = (int32_t) (rand() % m_random_spread + 1 - (m_random_spread/2));
+
+    uint32_t m_timeout = m_timeout_basis + variation;
+
+    NRF_LOG_RAW_INFO("TIMEOUT:    %d \r\n", m_timeout);
+    NRF_LOG_FLUSH();
+
     err_code = app_timer_start(m_timer_id,
                      APP_TIMER_TICKS(m_timeout), NULL);
     APP_ERROR_CHECK(err_code);
@@ -218,7 +227,7 @@ int main(void)
     read_t_and_hr();
 
     uint32_t err_code = app_timer_start(m_timer_id,
-            APP_TIMER_TICKS(m_timeout), NULL);
+            APP_TIMER_TICKS(m_timeout_basis), NULL);
     APP_ERROR_CHECK(err_code);
 
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
